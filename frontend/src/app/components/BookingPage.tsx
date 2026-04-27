@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, CreditCard, CheckCircle2, ArrowLeft, UtensilsCrossed } from 'lucide-react';
 import { motion } from 'motion/react';
 import { FoodMenu } from './FoodMenu';
+import { api } from '../lib/api';
 
 interface BookingPageProps {
-  stationData?: { stationId: number; stationType: 'ps5' | 'pc' };
+  stationData?: { stationId: string; stationType: 'ps5' | 'pc'; stationName?: string; price?: number };
   onNavigate: (page: string) => void;
+  authToken: string;
 }
 
 const timeSlots = [
@@ -14,17 +16,22 @@ const timeSlots = [
   '21:00', '22:00', '23:00'
 ];
 
-export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
+export function BookingPage({ stationData, onNavigate, authToken }: BookingPageProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [foodCart, setFoodCart] = useState<{ [key: number]: number }>({});
   const [foodTotal, setFoodTotal] = useState(0);
+  const [availableSlots, setAvailableSlots] = useState<string[]>(timeSlots);
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   const stationType = stationData?.stationType || 'ps5';
-  const stationId = stationData?.stationId || 1;
-  const pricePerHour = stationType === 'ps5' ? 200 : 300;
+  const stationId = stationData?.stationId || '';
+  const pricePerHour = stationData?.price || (stationType === 'ps5' ? 200 : 300);
   const accentColor = stationType === 'ps5' ? 'var(--neon-cyan)' : 'var(--neon-purple)';
+  const selectedDateKey = useMemo(() => selectedDate.toISOString().slice(0, 10), [selectedDate]);
 
   const handleFoodUpdate = (items: { [key: number]: number }, total: number) => {
     setFoodCart(items);
@@ -40,11 +47,59 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
   const stationPrice = selectedSlots.length * pricePerHour;
   const totalPrice = stationPrice + foodTotal;
 
-  const handleBooking = () => {
-    setBookingComplete(true);
-    setTimeout(() => {
-      onNavigate('dashboard');
-    }, 3000);
+  useEffect(() => {
+    if (!stationId) return;
+
+    const fetchSlots = async () => {
+      try {
+        setSlotLoading(true);
+        const result = await api.bookings.slots(stationId, selectedDateKey);
+        setAvailableSlots(result.availableSlots || []);
+        setSelectedSlots([]);
+      } catch {
+        setAvailableSlots(timeSlots);
+      } finally {
+        setSlotLoading(false);
+      }
+    };
+
+    fetchSlots();
+  }, [selectedDateKey, stationId]);
+
+  const handleBooking = async () => {
+    if (!authToken) {
+      onNavigate('auth');
+      return;
+    }
+
+    if (!stationId) {
+      setBookingError('Invalid station selected.');
+      return;
+    }
+
+    try {
+      setBookingLoading(true);
+      setBookingError('');
+
+      await api.bookings.create(authToken, {
+        stationId,
+        date: selectedDateKey,
+        slots: selectedSlots,
+        stationType,
+        pricePerHour,
+        foodItems: [],
+        foodTotal,
+      });
+
+      setBookingComplete(true);
+      setTimeout(() => {
+        onNavigate('dashboard');
+      }, 2000);
+    } catch (error: any) {
+      setBookingError(error.message || 'Booking failed');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   if (bookingComplete) {
@@ -64,8 +119,8 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
               <CheckCircle2 className="w-24 h-24 relative z-10" style={{ color: accentColor }} />
             </div>
           </div>
-          <h2 className="text-4xl font-bold mb-4">Booking Confirmed!</h2>
-          <p className="text-gray-400 text-lg">Your gaming session is ready. See you soon!</p>
+          <h2 className="text-4xl font-bold mb-4">Booking Submitted!</h2>
+          <p className="text-gray-400 text-lg">Your request is waiting for admin verification.</p>
         </motion.div>
       </div>
     );
@@ -89,7 +144,7 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
             </span>
           </h1>
           <p className="text-gray-400">
-            {stationType === 'ps5' ? 'PS5' : 'Gaming PC'} Station #{stationId.toString().padStart(2, '0')}
+            {stationData?.stationName || `${stationType === 'ps5' ? 'PS5' : 'Gaming PC'} Station`}
           </p>
         </div>
 
@@ -139,7 +194,7 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                 {timeSlots.map(slot => {
                   const isSelected = selectedSlots.includes(slot);
-                  const isBooked = Math.random() > 0.7;
+                  const isBooked = !availableSlots.includes(slot);
 
                   return (
                     <button
@@ -162,6 +217,7 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
                   );
                 })}
               </div>
+              {slotLoading && <p className="mt-3 text-sm text-gray-400">Refreshing available slots...</p>}
             </div>
 
             <div className="p-8 rounded-3xl bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)]">
@@ -184,7 +240,7 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
                 </div>
                 <div className="flex justify-between py-3 border-b border-[var(--glass-border)]">
                   <span className="text-gray-400">Station ID</span>
-                  <span className="font-semibold">#{stationId.toString().padStart(2, '0')}</span>
+                  <span className="font-semibold">{stationId.slice(-6) || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-[var(--glass-border)]">
                   <span className="text-gray-400">Date</span>
@@ -217,9 +273,9 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
 
               <button
                 onClick={handleBooking}
-                disabled={selectedSlots.length === 0}
+                disabled={selectedSlots.length === 0 || bookingLoading}
                 className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                  selectedSlots.length === 0
+                  selectedSlots.length === 0 || bookingLoading
                     ? 'bg-gray-800 cursor-not-allowed opacity-50'
                     : 'shadow-lg hover:scale-105'
                 }`}
@@ -229,8 +285,10 @@ export function BookingPage({ stationData, onNavigate }: BookingPageProps) {
                 } : undefined}
               >
                 <CreditCard className="w-5 h-5" />
-                Confirm Booking
+                {bookingLoading ? 'Confirming...' : 'Confirm Booking'}
               </button>
+
+              {bookingError && <p className="mt-3 text-sm text-red-400">{bookingError}</p>}
 
               <p className="text-xs text-gray-500 text-center mt-4">
                 Cancellation allowed up to 2 hours before

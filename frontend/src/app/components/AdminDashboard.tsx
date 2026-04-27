@@ -1,12 +1,72 @@
+import { useEffect, useMemo, useState } from 'react';
 import { TrendingUp, Users, Gamepad2, IndianRupee } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { api } from '../lib/api';
 
-const statsData = [
-  { label: 'Total Bookings', value: '248', change: '+12%', icon: Gamepad2, color: 'var(--neon-cyan)' },
-  { label: 'Active Users', value: '89', change: '+8%', icon: Users, color: 'var(--neon-purple)' },
-  { label: 'Revenue Today', value: '₹24,500', change: '+18%', icon: IndianRupee, color: 'var(--neon-blue)' },
-  { label: 'Avg. Session', value: '2.4h', change: '+5%', icon: TrendingUp, color: 'var(--neon-pink)' },
-];
+interface AdminDashboardProps {
+  authToken: string;
+}
+
+export function AdminDashboard({ authToken }: AdminDashboardProps) {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [bookingRes, stationRes] = await Promise.all([
+          api.bookings.allAdmin(authToken),
+          api.stations.all(),
+        ]);
+        setBookings(bookingRes.bookings || []);
+        setStations(stationRes.stations || []);
+      } catch {
+        setBookings([]);
+        setStations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [authToken]);
+
+  const refreshData = async () => {
+    const [bookingRes, stationRes] = await Promise.all([
+      api.bookings.allAdmin(authToken),
+      api.stations.all(),
+    ]);
+    setBookings(bookingRes.bookings || []);
+    setStations(stationRes.stations || []);
+  };
+
+  const handleVerify = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
+    try {
+      setActionLoading(bookingId + status);
+      await api.bookings.update(authToken, bookingId, { status });
+      await refreshData();
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  const statsData = useMemo(() => {
+    const totalBookings = bookings.length;
+    const activeUsers = new Set(bookings.map((booking) => booking.user?._id).filter(Boolean)).size;
+    const revenue = bookings.reduce((sum, booking) => sum + (booking.grandTotal || 0), 0);
+    const avgSession = totalBookings > 0
+      ? (bookings.reduce((sum, booking) => sum + (booking.duration || 0), 0) / totalBookings).toFixed(1)
+      : '0.0';
+
+    return [
+      { label: 'Total Bookings', value: `${totalBookings}`, change: 'Live', icon: Gamepad2, color: 'var(--neon-cyan)' },
+      { label: 'Active Users', value: `${activeUsers}`, change: 'Live', icon: Users, color: 'var(--neon-purple)' },
+      { label: 'Revenue Total', value: `₹${revenue}`, change: 'Live', icon: IndianRupee, color: 'var(--neon-blue)' },
+      { label: 'Avg. Session', value: `${avgSession}h`, change: 'Live', icon: TrendingUp, color: 'var(--neon-pink)' },
+    ];
+  }, [bookings]);
 
 const bookingsData = [
   { name: 'Mon', ps5: 32, pc: 28 },
@@ -18,15 +78,21 @@ const bookingsData = [
   { name: 'Sun', ps5: 52, pc: 45 },
 ];
 
-const recentBookings = [
-  { id: 'B001', user: 'Alex Kumar', station: 'PS5 Station 02', time: '14:00 - 16:00', status: 'Active', type: 'ps5' },
-  { id: 'B002', user: 'Priya Shah', station: 'Gaming PC 05', time: '15:00 - 18:00', status: 'Active', type: 'pc' },
-  { id: 'B003', user: 'Rahul Verma', station: 'PS5 Station 07', time: '16:00 - 18:00', status: 'Pending', type: 'ps5' },
-  { id: 'B004', user: 'Sneha Patel', station: 'Gaming PC 01', time: '14:00 - 15:00', status: 'Completed', type: 'pc' },
-  { id: 'B005', user: 'Arjun Singh', station: 'PS5 Station 01', time: '13:00 - 16:00', status: 'Active', type: 'ps5' },
-];
+  const recentBookings = bookings.slice(0, 10).map((booking) => ({
+    id: booking._id,
+    user: booking.user?.username || booking.user?.email || 'Unknown User',
+    station: booking.station?.name || 'Unknown Station',
+    time: `${booking.startTime || '--'} - ${booking.endTime || '--'}`,
+    status: booking.status || 'pending',
+    type: booking.stationType || 'pc',
+    rawStatus: booking.status || 'pending',
+  }));
 
-export function AdminDashboard() {
+  const ps5Total = stations.filter((station) => station.type === 'ps5').length;
+  const ps5Active = stations.filter((station) => station.type === 'ps5' && station.status === 'available').length;
+  const pcTotal = stations.filter((station) => station.type === 'pc').length;
+  const pcActive = stations.filter((station) => station.type === 'pc' && station.status === 'available').length;
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-6">
       <div className="max-w-7xl mx-auto">
@@ -91,20 +157,20 @@ export function AdminDashboard() {
               <div className="p-4 rounded-xl bg-[var(--muted)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">PS5 Stations</span>
-                  <span className="text-[var(--neon-cyan)]">6/8 Active</span>
+                  <span className="text-[var(--neon-cyan)]">{ps5Active}/{ps5Total || 0} Active</span>
                 </div>
                 <div className="w-full h-2 bg-[#0a0a0f] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-blue)]" style={{ width: '75%' }}></div>
+                  <div className="h-full bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-blue)]" style={{ width: `${ps5Total ? Math.round((ps5Active / ps5Total) * 100) : 0}%` }}></div>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl bg-[var(--muted)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">PC Stations</span>
-                  <span className="text-[var(--neon-purple)]">4/6 Active</span>
+                  <span className="text-[var(--neon-purple)]">{pcActive}/{pcTotal || 0} Active</span>
                 </div>
                 <div className="w-full h-2 bg-[#0a0a0f] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[var(--neon-purple)] to-[var(--neon-pink)]" style={{ width: '67%' }}></div>
+                  <div className="h-full bg-gradient-to-r from-[var(--neon-purple)] to-[var(--neon-pink)]" style={{ width: `${pcTotal ? Math.round((pcActive / pcTotal) * 100) : 0}%` }}></div>
                 </div>
               </div>
 
@@ -127,12 +193,13 @@ export function AdminDashboard() {
                   <th className="text-left py-4 px-4 text-gray-400 font-medium">Station</th>
                   <th className="text-left py-4 px-4 text-gray-400 font-medium">Time</th>
                   <th className="text-left py-4 px-4 text-gray-400 font-medium">Status</th>
+                  <th className="text-left py-4 px-4 text-gray-400 font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {recentBookings.map((booking) => (
                   <tr key={booking.id} className="border-b border-[var(--glass-border)] hover:bg-[var(--muted)]/30 transition-colors">
-                    <td className="py-4 px-4">{booking.id}</td>
+                    <td className="py-4 px-4">{booking.id.slice(-6)}</td>
                     <td className="py-4 px-4">{booking.user}</td>
                     <td className="py-4 px-4">
                       <span
@@ -149,20 +216,43 @@ export function AdminDashboard() {
                     <td className="py-4 px-4">
                       <span
                         className={`px-3 py-1 rounded-lg text-sm ${
-                          booking.status === 'Active'
+                          booking.rawStatus === 'active' || booking.rawStatus === 'confirmed'
                             ? 'bg-green-500/20 text-green-400'
-                            : booking.status === 'Pending'
+                            : booking.rawStatus === 'pending'
                             ? 'bg-yellow-500/20 text-yellow-400'
                             : 'bg-gray-500/20 text-gray-400'
                         }`}
                       >
-                        {booking.status}
+                        {booking.rawStatus.charAt(0).toUpperCase() + booking.rawStatus.slice(1)}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      {booking.rawStatus === 'pending' ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleVerify(booking.id, 'confirmed')}
+                            disabled={actionLoading === booking.id + 'confirmed'}
+                            className="px-3 py-2 rounded-lg text-sm bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === booking.id + 'confirmed' ? 'Saving...' : 'Verify'}
+                          </button>
+                          <button
+                            onClick={() => handleVerify(booking.id, 'cancelled')}
+                            disabled={actionLoading === booking.id + 'cancelled'}
+                            className="px-3 py-2 rounded-lg text-sm bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">Verified</span>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {loading && <p className="text-gray-400 mt-4">Loading admin data...</p>}
           </div>
         </div>
       </div>

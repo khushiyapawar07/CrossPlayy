@@ -4,9 +4,11 @@ import { useState } from 'react';
 interface NavbarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  currentUser: { username: string; isAdmin: boolean } | null;
+  onLogout: () => void;
 }
 
-export function Navbar({ currentPage, onNavigate }: NavbarProps) {
+export function Navbar({ currentPage, onNavigate, currentUser, onLogout }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -22,7 +24,7 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
               <Gamepad2 className="w-8 h-8 text-[var(--neon-cyan)] relative z-10" />
             </div>
             <span className="text-xl font-semibold bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-purple)] bg-clip-text text-transparent">
-              NEXUS GAMING
+              CROSSPLAY
             </span>
           </button>
 
@@ -45,9 +47,22 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
             >
               Admin
             </button>
-            <button className="p-2 rounded-full bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-purple)] hover:shadow-lg hover:shadow-[var(--neon-cyan)]/50 transition-all">
-              <User className="w-5 h-5 text-[#0a0a0f]" />
-            </button>
+            {currentUser ? (
+              <button
+                onClick={onLogout}
+                className="px-3 py-2 rounded-xl bg-[var(--muted)] text-sm text-gray-200 hover:text-white transition-colors"
+              >
+                Logout ({currentUser.username})
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('auth')}
+                className="p-2 rounded-full bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-purple)] hover:shadow-lg hover:shadow-[var(--neon-cyan)]/50 transition-all"
+                title="User Login"
+              >
+                <User className="w-5 h-5 text-[#0a0a0f]" />
+              </button>
+            )}
           </div>
 
           <button
@@ -78,6 +93,21 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
             >
               Admin
             </button>
+            {currentUser ? (
+              <button
+                onClick={() => { onLogout(); setMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-2 text-gray-400 hover:text-[var(--neon-cyan)] transition-colors"
+              >
+                Logout
+              </button>
+            ) : (
+              <button
+                onClick={() => { onNavigate('auth'); setMobileMenuOpen(false); }}
+                className="block w-full text-left px-4 py-2 text-gray-400 hover:text-[var(--neon-cyan)] transition-colors"
+              >
+                Login
+              </button>
+            )}
           </div>
         )}
       </div>
