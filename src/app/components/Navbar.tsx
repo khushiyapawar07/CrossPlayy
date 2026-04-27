@@ -22,7 +22,7 @@ export function Navbar({ currentPage, onNavigate }: NavbarProps) {
               <Gamepad2 className="w-8 h-8 text-[var(--neon-cyan)] relative z-10" />
             </div>
             <span className="text-xl font-semibold bg-gradient-to-r from-[var(--neon-cyan)] to-[var(--neon-purple)] bg-clip-text text-transparent">
-              NEXUS GAMING
+              CROSSPLAY
             </span>
           </button>
 
