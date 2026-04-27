@@ -2,14 +2,14 @@ import { motion } from 'motion/react';
 import { Circle, Clock } from 'lucide-react';
 
 interface StationCardProps {
-  id: number;
+  id: string;
   type: 'ps5' | 'pc';
   name: string;
   image: string;
   status: 'available' | 'booked';
   price: number;
   specs?: string[];
-  onBook: (id: number, type: 'ps5' | 'pc') => void;
+  onBook: (id: string, type: 'ps5' | 'pc') => void;
 }
 
 export function StationCard({ id, type, name, image, status, price, specs, onBook }: StationCardProps) {
