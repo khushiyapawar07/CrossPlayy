@@ -75,6 +75,20 @@ Replace:
 - `cluster_name` - Your cluster name (from MongoDB Atlas)
 - `your_super_secret_jwt_key_change_this_in_production` - A random secret string
 
+### 4.1 Connect MongoDB Compass to the same database
+
+1. Open MongoDB Compass
+2. Click **New Connection**
+3. Paste the same URI you put in `.env` for `MONGODB_URI`
+4. Click **Connect**
+5. Open/create database `crossplayy` and verify collections (`users`, `stations`, `bookings`, `foods`)
+
+If you use local MongoDB instead of Atlas, set:
+```
+MONGODB_URI=mongodb://127.0.0.1:27017/crossplayy
+```
+and use the same URI in Compass.
+
 ## Step 5: Seed Database (Optional but Recommended)
 
 To populate your database with sample stations and food items:

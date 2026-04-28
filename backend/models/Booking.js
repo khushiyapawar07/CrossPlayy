@@ -75,4 +75,9 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Common query patterns used by admin and user dashboards.
+bookingSchema.index({ date: -1, createdAt: -1 });
+bookingSchema.index({ user: 1, createdAt: -1 });
+bookingSchema.index({ station: 1, date: 1 });
+
 export default mongoose.model('Booking', bookingSchema);

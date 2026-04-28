@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -41,7 +41,21 @@ export const api = {
   bookings: {
     create: (token: string, payload: unknown) => apiRequest('/bookings', { method: 'POST', token, body: payload }),
     my: (token: string) => apiRequest('/bookings/user/my-bookings', { token }),
-    allAdmin: (token: string) => apiRequest('/bookings/admin/all', { token }),
+    allAdmin: (
+      token: string,
+      params?: { page?: number; limit?: number; status?: string; dateFrom?: string; dateTo?: string }
+    ) => {
+      const query = new URLSearchParams();
+
+      if (params?.page) query.set('page', String(params.page));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.status) query.set('status', params.status);
+      if (params?.dateFrom) query.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) query.set('dateTo', params.dateTo);
+
+      const suffix = query.toString();
+      return apiRequest(`/bookings/admin/all${suffix ? `?${suffix}` : ''}`, { token });
+    },
     slots: (stationId: string, date: string) => apiRequest(`/bookings/slots/${stationId}/${date}`),
     update: (token: string, bookingId: string, payload: unknown) =>
       apiRequest(`/bookings/${bookingId}`, { method: 'PUT', token, body: payload }),
