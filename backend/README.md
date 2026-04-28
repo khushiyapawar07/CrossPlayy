@@ -35,12 +35,17 @@ npm install
 cp .env.example .env
 ```
 
-4. Update `.env` with your MongoDB Atlas connection string and JWT secret:
+4. Update `.env` with your MongoDB connection string and JWT secret:
 ```
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/crossplayy?retryWrites=true&w=majority
 JWT_SECRET=your_jwt_secret_key_here
 PORT=5000
 NODE_ENV=development
+```
+
+For local MongoDB (MongoDB Compass + local server), use:
+```
+MONGODB_URI=mongodb://127.0.0.1:27017/crossplayy
 ```
 
 ## 🎯 MongoDB Atlas Setup
@@ -49,6 +54,14 @@ NODE_ENV=development
 2. Create a new cluster
 3. Add database user with username and password
 4. Get connection string and update in `.env`
+
+## 🧭 MongoDB Compass Setup
+
+1. Open MongoDB Compass
+2. Click **New Connection**
+3. Paste the exact same `MONGODB_URI` from `backend/.env`
+4. Connect and open database `crossplayy`
+5. Verify collections like `users`, `stations`, `bookings`, and `foods`
 
 ## 🏃 Running the Server
 

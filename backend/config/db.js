@@ -4,7 +4,7 @@ const connectDB = async () => {
   const mongoUri = process.env.MONGODB_URI;
 
   if (!mongoUri || typeof mongoUri !== 'string') {
-    console.error('MONGODB_URI is missing. Create backend/.env and set a valid MongoDB Atlas connection string.');
+    console.error('MONGODB_URI is missing. Create backend/.env and set a valid MongoDB URI (Atlas or local Compass server).');
     process.exit(1);
   }
 
@@ -14,7 +14,9 @@ const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(mongoUri);
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 10000,
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
   } catch (error) {

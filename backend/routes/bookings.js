@@ -23,12 +23,78 @@ router.get('/user/my-bookings', auth, async (req, res) => {
 // Get all bookings (Admin only)
 router.get('/admin/all', auth, adminAuth, async (req, res) => {
   try {
-    const bookings = await Booking.find()
-      .populate('station')
-      .populate('user')
-      .sort({ date: -1 });
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const requestedLimit = parseInt(req.query.limit, 10) || 50;
+    const limit = Math.min(Math.max(requestedLimit, 1), 200);
+    const skip = (page - 1) * limit;
 
-    res.json({ bookings });
+    const match = {};
+
+    if (req.query.status) {
+      match.status = req.query.status;
+    }
+
+    if (req.query.dateFrom || req.query.dateTo) {
+      match.date = {};
+
+      if (req.query.dateFrom) {
+        match.date.$gte = new Date(req.query.dateFrom);
+      }
+
+      if (req.query.dateTo) {
+        match.date.$lte = new Date(req.query.dateTo);
+      }
+    }
+
+    const [bookings, totalBookings, statsAgg] = await Promise.all([
+      Booking.find(match)
+        .select('user station date startTime endTime duration stationType grandTotal status paymentStatus createdAt')
+        .populate('station', 'name type status')
+        .populate('user', 'username email')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Booking.countDocuments(match),
+      Booking.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: '$grandTotal' },
+            avgSession: { $avg: '$duration' },
+            activeUsersSet: { $addToSet: '$user' },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            revenue: 1,
+            avgSession: { $ifNull: ['$avgSession', 0] },
+            activeUsers: { $size: '$activeUsersSet' },
+          },
+        },
+      ]),
+    ]);
+
+    const stats = statsAgg[0] || { revenue: 0, avgSession: 0, activeUsers: 0 };
+    const totalPages = Math.max(Math.ceil(totalBookings / limit), 1);
+
+    res.json({
+      bookings,
+      pagination: {
+        page,
+        limit,
+        totalBookings,
+        totalPages,
+      },
+      stats: {
+        totalBookings,
+        revenue: stats.revenue,
+        avgSession: Number(stats.avgSession.toFixed(1)),
+        activeUsers: stats.activeUsers,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

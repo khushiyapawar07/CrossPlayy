@@ -10,6 +10,7 @@ interface AdminDashboardProps {
 export function AdminDashboard({ authToken }: AdminDashboardProps) {
   const [bookings, setBookings] = useState<any[]>([]);
   const [stations, setStations] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalBookings: 0, activeUsers: 0, revenue: 0, avgSession: 0 });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState('');
 
@@ -17,14 +18,16 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
     const fetchData = async () => {
       try {
         const [bookingRes, stationRes] = await Promise.all([
-          api.bookings.allAdmin(authToken),
+          api.bookings.allAdmin(authToken, { page: 1, limit: 50 }),
           api.stations.all(),
         ]);
         setBookings(bookingRes.bookings || []);
         setStations(stationRes.stations || []);
+        setStats(bookingRes.stats || { totalBookings: 0, activeUsers: 0, revenue: 0, avgSession: 0 });
       } catch {
         setBookings([]);
         setStations([]);
+        setStats({ totalBookings: 0, activeUsers: 0, revenue: 0, avgSession: 0 });
       } finally {
         setLoading(false);
       }
@@ -34,12 +37,22 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
   }, [authToken]);
 
   const refreshData = async () => {
-    const [bookingRes, stationRes] = await Promise.all([
-      api.bookings.allAdmin(authToken),
-      api.stations.all(),
-    ]);
-    setBookings(bookingRes.bookings || []);
-    setStations(stationRes.stations || []);
+    setLoading(true);
+    try {
+      const [bookingRes, stationRes] = await Promise.all([
+        api.bookings.allAdmin(authToken, { page: 1, limit: 50 }),
+        api.stations.all(),
+      ]);
+      setBookings(bookingRes.bookings || []);
+      setStations(stationRes.stations || []);
+      setStats(bookingRes.stats || { totalBookings: 0, activeUsers: 0, revenue: 0, avgSession: 0 });
+    } catch {
+      setBookings([]);
+      setStations([]);
+      setStats({ totalBookings: 0, activeUsers: 0, revenue: 0, avgSession: 0 });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
@@ -53,11 +66,13 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
   };
 
   const statsData = useMemo(() => {
-    const totalBookings = bookings.length;
-    const activeUsers = new Set(bookings.map((booking) => booking.user?._id).filter(Boolean)).size;
-    const revenue = bookings.reduce((sum, booking) => sum + (booking.grandTotal || 0), 0);
-    const avgSession = totalBookings > 0
-      ? (bookings.reduce((sum, booking) => sum + (booking.duration || 0), 0) / totalBookings).toFixed(1)
+    const totalBookings = stats.totalBookings || bookings.length;
+    const activeUsers = stats.activeUsers || new Set(bookings.map((booking) => booking.user?._id).filter(Boolean)).size;
+    const revenue = stats.revenue || bookings.reduce((sum, booking) => sum + (booking.grandTotal || 0), 0);
+    const avgSession = (stats.avgSession || 0) > 0
+      ? stats.avgSession.toFixed(1)
+      : totalBookings > 0
+      ? (bookings.reduce((sum, booking) => sum + (booking.duration || 0), 0) / Math.max(bookings.length, 1)).toFixed(1)
       : '0.0';
 
     return [
@@ -66,7 +81,7 @@ export function AdminDashboard({ authToken }: AdminDashboardProps) {
       { label: 'Revenue Total', value: `₹${revenue}`, change: 'Live', icon: IndianRupee, color: 'var(--neon-blue)' },
       { label: 'Avg. Session', value: `${avgSession}h`, change: 'Live', icon: TrendingUp, color: 'var(--neon-pink)' },
     ];
-  }, [bookings]);
+  }, [bookings, stats]);
 
 const bookingsData = [
   { name: 'Mon', ps5: 32, pc: 28 },
