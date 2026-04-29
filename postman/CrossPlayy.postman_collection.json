@@ -1,0 +1,283 @@
+{
+  "info": {
+    "_postman_id": "7e0d5c49-0a8a-4d5b-8db4-3f38c5c8d3f8",
+    "name": "CrossPlayy API",
+    "description": "CrossPlayy API collection for auth, stations, bookings, and food CRUD.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "paste_user_jwt_here" },
+    { "key": "adminToken", "value": "paste_admin_jwt_here" },
+    { "key": "stationId", "value": "" },
+    { "key": "bookingId", "value": "" },
+    { "key": "foodId", "value": "" },
+    { "key": "date", "value": "2026-05-01" },
+    { "key": "category", "value": "snack" },
+    { "key": "type", "value": "ps5" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john_doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543210\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/profile" }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/profile" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"email\": \"newemail@example.com\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stations",
+      "item": [
+        {
+          "name": "Get All",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/stations" }
+          }
+        },
+        {
+          "name": "Get By Type",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/stations/type/{{type}}" }
+          }
+        },
+        {
+          "name": "Get By Id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/stations/{{stationId}}" }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/stations" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PS5 Station 09\",\n  \"type\": \"ps5\",\n  \"price\": 250,\n  \"specs\": [\"4K Display\", \"DualSense Controller\"],\n  \"image\": \"https://example.com/station.jpg\",\n  \"description\": \"Latest PS5 station\",\n  \"location\": \"Gaming Zone A\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/stations/{{stationId}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 300,\n  \"status\": \"maintenance\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/stations/{{stationId}}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Get Slots",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/bookings/slots/{{stationId}}/{{date}}" }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/bookings" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stationId\": \"{{stationId}}\",\n  \"date\": \"{{date}}\",\n  \"slots\": [\"14:00\", \"15:00\"],\n  \"stationType\": \"ps5\",\n  \"pricePerHour\": 200,\n  \"foodItems\": [],\n  \"foodTotal\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/user/my-bookings" }
+          }
+        },
+        {
+          "name": "Get All Admin",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/admin/all?page=1&limit=50" }
+          }
+        },
+        {
+          "name": "Get By Id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}" }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"paymentStatus\": \"completed\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel" }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Food",
+      "item": [
+        {
+          "name": "Get All",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/food" }
+          }
+        },
+        {
+          "name": "Get By Category",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/food/category/{{category}}" }
+          }
+        },
+        {
+          "name": "Get By Id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/food/{{foodId}}" }
+          }
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/food" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Energy Drink\",\n  \"price\": 100,\n  \"category\": \"beverage\",\n  \"description\": \"Gaming energy drink\",\n  \"image\": \"https://example.com/food.jpg\",\n  \"quantity\": 50,\n  \"availability\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/food/{{foodId}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 120,\n  \"availability\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/food/{{foodId}}" }
+          }
+        }
+      ]
+    }
+  ]
+}
